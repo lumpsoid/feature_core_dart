@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'shell_effect_handler.dart';
-import 'side_effector.dart';
-import 'typedefs.dart';
-import 'view_state_binder.dart';
+import 'package:feature_core/src/shell_effect_handler.dart';
+import 'package:feature_core/src/side_effector.dart';
+import 'package:feature_core/src/typedefs.dart';
+import 'package:feature_core/src/view_state_binder.dart';
 
 /// Generic controller base for MVI feature modules.
 ///

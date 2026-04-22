@@ -1,4 +1,4 @@
-import 'typedefs.dart';
+import 'package:feature_core/src/typedefs.dart';
 
 /// Bridges the controller to the view's side-effect callback.
 /// Detached by default; attach on view mount, detach on view dispose.
