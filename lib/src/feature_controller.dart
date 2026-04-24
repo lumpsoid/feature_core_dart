@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:feature_core/src/external_signal_listener.dart';
 import 'package:feature_core/src/shell_effect_handler.dart';
 import 'package:feature_core/src/side_effector.dart';
 import 'package:feature_core/src/typedefs.dart';
@@ -10,6 +11,7 @@ import 'package:feature_core/src/view_state_binder.dart';
 /// Subclasses only need to:
 /// 1. Pass the feature's pure [UpdateFn] and a [ShellEffectHandler] to `super`.
 /// 2. Expose a typed constructor that builds those two objects.
+/// 3. Optionally supply [_signalListeners] for external event sources.
 ///
 /// Type parameters:
 /// - [S]  State
@@ -20,30 +22,45 @@ abstract base class FeatureController<S, A, SE, E> {
   FeatureController({
     required UpdateFn<S, A, SE> update,
     required ShellEffectHandler<SE, A, E> shellHandler,
+    List<ExternalSignalListener<A>>? signalListeners,
     ViewStateBinder<S>? viewBinding,
     SideEffector<E>? effectPusher,
   }) : _update = update,
        _shellHandler = shellHandler,
+       _signalListeners = signalListeners,
        _viewBinding = viewBinding ?? ViewStateBinder<S>(),
        _effectPusher = effectPusher ?? SideEffector<E>();
 
   final UpdateFn<S, A, SE> _update;
   final ShellEffectHandler<SE, A, E> _shellHandler;
+  final List<ExternalSignalListener<A>>? _signalListeners;
   final ViewStateBinder<S> _viewBinding;
   final SideEffector<E> _effectPusher;
 
   // View lifecycle
 
-  void onViewAttach({
+  Future<void> onViewAttach({
     required StateGetter<S> getter,
     required StateUpdater<S> updater,
     required SideEffectPusher<E> pusher,
-  }) {
+  }) async {
     _viewBinding.attach(getter, updater);
     _effectPusher.attach(pusher);
+
+    if (_signalListeners != null) {
+      for (final listener in _signalListeners) {
+        await listener.onAttach(dispatch);
+      }
+    }
   }
 
-  void onViewDetach() {
+  Future<void> onViewDetach() async {
+    if (_signalListeners != null) {
+      for (final listener in _signalListeners) {
+        await listener.onDetach();
+      }
+    }
+
     _viewBinding.detach();
     _effectPusher.detach();
   }
