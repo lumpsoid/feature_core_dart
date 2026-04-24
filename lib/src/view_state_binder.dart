@@ -6,11 +6,20 @@ class ViewStateBinder<S> {
   StateGetter<S>? _getter;
   StateUpdater<S>? _updater;
 
+  /// Attaches the getter and updater callbacks to this binder.
+  ///
+  /// The [getter] returns the current state from the view, and the [updater]
+  /// pushes a new state to the view. After attaching, [state] and [update]
+  /// become functional. This should be called when the view is mounted.
   void attach(StateGetter<S> getter, StateUpdater<S> updater) {
     _getter = getter;
     _updater = updater;
   }
 
+  /// Detaches the binder from the view, clearing the stored callbacks.
+  ///
+  /// After detaching, [state] will throw a [StateError] and [update] will
+  /// be a no-op. This should be called when the view is disposed.
   void detach() {
     _getter = null;
     _updater = null;

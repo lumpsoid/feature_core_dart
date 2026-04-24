@@ -7,6 +7,7 @@ import 'package:feature_core/src/typedefs.dart';
 import 'package:feature_core/src/updater.dart';
 import 'package:feature_core/src/view_state_binder.dart';
 
+/// {@template feature_controller}
 /// Generic controller base for MVI feature modules.
 ///
 /// Subclasses only need to:
@@ -19,7 +20,9 @@ import 'package:feature_core/src/view_state_binder.dart';
 /// - [A]  Action
 /// - [SE] ShellEffect
 /// - [E]  UI Effect
+/// {@endtemplate}
 abstract base class FeatureController<S, A, SE, E> {
+  /// {@macro feature_controller}
   FeatureController({
     required Updater<S, A, SE> updater,
     required ShellEffectHandler<SE, A, E> shellHandler,
@@ -40,6 +43,11 @@ abstract base class FeatureController<S, A, SE, E> {
 
   // View lifecycle
 
+  /// Attaches the controller to a view.
+  ///
+  /// Sets up state binding using the provided [getter] and [updater], and
+  /// configures side effect delivery via [pusher]. Also attaches any external
+  /// signal listeners that were supplied at construction.
   Future<void> onViewAttach({
     required StateGetter<S> getter,
     required StateUpdater<S> updater,
@@ -55,6 +63,11 @@ abstract base class FeatureController<S, A, SE, E> {
     }
   }
 
+  /// Detaches the controller from the view.
+  ///
+  /// Calls [ExternalSignalListener.onDetach] on all signal listeners, and
+  /// detaches the view state binder and side effector, clearing any resources
+  /// tied to the view.
   Future<void> onViewDetach() async {
     if (_signalListeners != null) {
       for (final listener in _signalListeners) {
@@ -69,9 +82,16 @@ abstract base class FeatureController<S, A, SE, E> {
   // Dispatch
 
   /// Fire-and-forget dispatch — used by UI event handlers.
+  ///
+  /// Sends an [action] to the feature without waiting for its completion.
   void dispatch(A action) => unawaited(dispatchAsync(action));
 
-  /// Awaitable dispatch — used in tests or when sequencing matters.
+  /// Awaitable dispatch
+  ///
+  /// Processes the [action] through the [_updater], updates the state, and
+  /// runs any resulting shell effects via the [_shellHandler]. The returned
+  /// [Future] completes after the action and all shell effects have been
+  /// handled.
   Future<void> dispatchAsync(A action) async {
     final (next, shellEffects) = _updater.update(_viewBinding.state, action);
     _viewBinding.update(next);
