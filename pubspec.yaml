@@ -1,6 +1,6 @@
 name: feature_core
 description: Reusable MVI architecture primitives for feature modules.
-version: 0.1.0+1
+version: 0.2.0+1
 publish_to: none
 
 environment:
