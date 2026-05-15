@@ -7,9 +7,9 @@
 /// Type parameters:
 /// - [S]  State
 /// - [A]  Action
-/// - [SE] ShellEffect
+/// - [E] ShellEffect
 /// {@endtemplate}
-abstract class Updater<S, A, SE> {
+abstract class Updater<S, A, E> {
   /// {@macro updater}
   const Updater();
 
@@ -18,10 +18,10 @@ abstract class Updater<S, A, SE> {
   ///
   /// Implementors must treat this as a pure function: it should not cause side
   /// effects, and any effects intended for the shell are returned in the list
-  /// of shell effects.
+  /// of effects.
   ///
-  /// Returns a tuple `(nextState, shellEffects?)`, where `nextState` is the
+  /// Returns a tuple `(nextState, effects?)`, where `nextState` is the
   /// resulting state, and `shellEffects` is an optional list of effects to be
   /// processed by the shell.
-  (S, List<SE>?) update(S state, A action);
+  (S, List<E>?) update(S state, A action);
 }

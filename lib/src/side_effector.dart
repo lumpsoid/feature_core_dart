@@ -1,4 +1,5 @@
-import 'package:feature_core/src/typedefs.dart';
+/// Pushes a side-effect to the view.
+typedef SideEffectPusher<E> = Future<void> Function(E effect);
 
 /// Bridges the controller to the view's side-effect callback.
 /// Detached by default; attach on view mount, detach on view dispose.
@@ -17,6 +18,6 @@ class SideEffector<E> {
   /// This should be called when the view is disposed.
   void detach() => _pusher = null;
 
-  /// Pushes a UI side-effect. No-ops if detached.
+  /// Pushes a side-effect. No-ops if detached.
   Future<void> push(E effect) async => _pusher?.call(effect);
 }

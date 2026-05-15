@@ -1,65 +1,45 @@
 import 'dart:async';
 
-import 'package:feature_core/src/external_signal_listener.dart';
+import 'package:feature_core/src/external_signal/external_signal_listener.dart';
+import 'package:feature_core/src/external_signal/external_signal_registrat.dart';
 import 'package:feature_core/src/shell_effect_handler.dart';
-import 'package:feature_core/src/side_effector.dart';
-import 'package:feature_core/src/typedefs.dart';
+import 'package:feature_core/src/state_holder.dart';
 import 'package:feature_core/src/updater.dart';
-import 'package:feature_core/src/view_state_binder.dart';
 
 /// {@template feature_controller}
 /// Generic controller base for MVI feature modules.
 ///
 /// Subclasses only need to:
-/// 1. Pass the feature's [Updater] and a [ShellEffectHandler] to `super`.
+/// 1. Pass the feature's [Updater] and a [EffectHandler] to `super`.
 /// 2. Expose a typed constructor that builds those two objects.
-/// 3. Optionally supply [_signalListeners] for external event sources.
+/// 3. Optionally supply [_externalSignalRegistrat] for external event sources.
 ///
 /// Type parameters:
 /// - [S]  State
 /// - [A]  Action
-/// - [SE] ShellEffect
-/// - [E]  UI Effect
+/// - [E] ShellEffect
 /// {@endtemplate}
-abstract base class FeatureController<S, A, SE, E> {
+abstract base class FeatureController<S, A, E> {
   /// {@macro feature_controller}
   FeatureController({
-    required Updater<S, A, SE> updater,
-    required ShellEffectHandler<SE, A, E> shellHandler,
-    List<ExternalSignalListener<A>>? signalListeners,
-    ViewStateBinder<S>? viewBinding,
-    SideEffector<E>? effectPusher,
-  }) : _updater = updater,
+    required StateHolder<S> stateHolder,
+    required Updater<S, A, E> updater,
+    required EffectHandler<E, A> shellHandler,
+    ExternalSignalRegistrat<A>? externalSignalRegistrat,
+  }) : _stateHolder = stateHolder,
+       _updater = updater,
        _shellHandler = shellHandler,
-       _signalListeners = signalListeners,
-       _viewBinding = viewBinding ?? ViewStateBinder<S>(),
-       _effectPusher = effectPusher ?? SideEffector<E>();
+       _externalSignalRegistrat = externalSignalRegistrat;
 
-  final Updater<S, A, SE> _updater;
-  final ShellEffectHandler<SE, A, E> _shellHandler;
-  final List<ExternalSignalListener<A>>? _signalListeners;
-  final ViewStateBinder<S> _viewBinding;
-  final SideEffector<E> _effectPusher;
-
-  // View lifecycle
+  final Updater<S, A, E> _updater;
+  final EffectHandler<E, A> _shellHandler;
+  final ExternalSignalRegistrat<A>? _externalSignalRegistrat;
+  final StateHolder<S> _stateHolder;
 
   /// Attaches the controller to a view.
-  ///
-  /// Sets up state binding using the provided [getter] and [updater], and
-  /// configures side effect delivery via [pusher]. Also attaches any external
-  /// signal listeners that were supplied at construction.
-  Future<void> onViewAttach({
-    required StateGetter<S> getter,
-    required StateUpdater<S> updater,
-    required SideEffectPusher<E> pusher,
-  }) async {
-    _viewBinding.attach(getter, updater);
-    _effectPusher.attach(pusher);
-
-    if (_signalListeners != null) {
-      for (final listener in _signalListeners) {
-        await listener.onAttach(dispatch);
-      }
+  void onAttach() {
+    if (_externalSignalRegistrat != null) {
+      _externalSignalRegistrat.onAttach(dispatch);
     }
   }
 
@@ -68,18 +48,11 @@ abstract base class FeatureController<S, A, SE, E> {
   /// Calls [ExternalSignalListener.onDetach] on all signal listeners, and
   /// detaches the view state binder and side effector, clearing any resources
   /// tied to the view.
-  Future<void> onViewDetach() async {
-    if (_signalListeners != null) {
-      for (final listener in _signalListeners) {
-        await listener.onDetach();
-      }
+  void onDetach() {
+    if (_externalSignalRegistrat != null) {
+      _externalSignalRegistrat.onDetach();
     }
-
-    _viewBinding.detach();
-    _effectPusher.detach();
   }
-
-  // Dispatch
 
   /// Fire-and-forget dispatch — used by UI event handlers.
   ///
@@ -93,14 +66,13 @@ abstract base class FeatureController<S, A, SE, E> {
   /// [Future] completes after the action and all shell effects have been
   /// handled.
   Future<void> dispatchAsync(A action) async {
-    final (next, shellEffects) = _updater.update(_viewBinding.state, action);
-    _viewBinding.update(next);
+    final (next, shellEffects) = _updater.update(_stateHolder.state, action);
+    _stateHolder.update(next);
     if (shellEffects != null) {
       for (final effect in shellEffects) {
         await _shellHandler.run(
           effect,
           dispatch: dispatch,
-          pushEffect: _effectPusher.push,
         );
       }
     }
